@@ -1,20 +1,68 @@
 #include "test_runner.h"
 
-#include <numeric>
 #include <iostream>
-#include <vector>
+#include <numeric>
 #include <string>
+#include <vector>
+
 using namespace std;
 
-// Реализуйте шаблон класса Paginator
+template <typename Iterator>
+class Page {
+ public:
+  Page(const Iterator& begin, const Iterator& end) : _begin(begin), _end(end) {
+    _size = distance(begin, end);
+  }
+  Iterator begin() { return _begin; }
+  Iterator end() { return _end; }
+  Iterator begin() const { return _begin; }
+  Iterator end() const { return _end; }
+  size_t size() const { return _size; }
+
+ private:
+  const Iterator _begin, _end;
+  size_t _size;
+};
 
 template <typename Iterator>
 class Paginator {
+ public:
+  Paginator(const Iterator& begin, const Iterator& end,
+            unsigned int page_size) {
+    if (begin == end) {
+      _size = 0;
+      return;
+    }
+    size_t page_count = 0;
+    Iterator start = begin;
+    Iterator finish = begin;
+    do {
+      if (distance(start, end) > page_size) {
+        finish = next(start, page_size);
+      } else {
+        finish = end;
+      }
+      _pages.push_back({start, finish});
+      start = finish;
+      page_count++;
+    } while (finish != end);
+    _size = page_count;
+  }
+
+  auto begin() { return _pages.begin(); }
+  auto begin() const { return _pages.begin(); }
+  auto end() { return _pages.end(); }
+  auto end() const { return _pages.end(); }
+  size_t size() const { return _size; }
+
+ private:
+  vector<Page<Iterator>> _pages;
+  size_t _size;
 };
 
-template <typename C>
-??? Paginate(C& c, size_t page_size) {
-  // Реализуйте этот шаблон функции
+template <typename Container>
+auto Paginate(Container& c, size_t page_size) {
+  return Paginator(c.begin(), c.end(), page_size);
 }
 
 void TestPageCounts() {
@@ -27,6 +75,18 @@ void TestPageCounts() {
   ASSERT_EQUAL(Paginate(v, 15).size(), 1u);
   ASSERT_EQUAL(Paginate(v, 150).size(), 1u);
   ASSERT_EQUAL(Paginate(v, 14).size(), 2u);
+}
+
+void TestPageCounts2() {
+  vector<int> v(0);
+
+  ASSERT_EQUAL(Paginate(v, 1).size(), v.size());
+  ASSERT_EQUAL(Paginate(v, 3).size(), 0);
+  ASSERT_EQUAL(Paginate(v, 5).size(), 0);
+  ASSERT_EQUAL(Paginate(v, 4).size(), 0);
+  ASSERT_EQUAL(Paginate(v, 15).size(), 0);
+  ASSERT_EQUAL(Paginate(v, 150).size(), 0);
+  ASSERT_EQUAL(Paginate(v, 14).size(), 0);
 }
 
 void TestLooping() {
@@ -42,7 +102,14 @@ void TestLooping() {
     os << '\n';
   }
 
-  ASSERT_EQUAL(os.str(), "1 2 3 4 5 6 \n7 8 9 10 11 12 \n13 14 15 \n");
+  const auto str_1 = os.str();
+  const string str_2 = "1 2 3 4 5 6 \n7 8 9 10 11 12 \n13 14 15 \n";
+
+  ASSERT_EQUAL(str_1.length(), str_2.length());
+  for (auto i = 0; i < str_1.length(); i++) {
+    ASSERT_EQUAL(str_1[i], str_2[i]);
+  }
+  ASSERT_EQUAL(str_1, str_2);
 }
 
 void TestModification() {
@@ -97,14 +164,8 @@ void TestPagePagination() {
   }
 
   const vector<vector<int>> expected = {
-      {1, 2, 3, 4},
-      {5, 6, 7, 8},
-      {9},
-      {10, 11, 12, 13},
-      {14, 15, 16, 17},
-      {18},
-      {19, 20, 21, 22}
-  };
+      {1, 2, 3, 4}, {5, 6, 7, 8},    {9}, {10, 11, 12, 13}, {14, 15, 16, 17},
+      {18},         {19, 20, 21, 22}};
   ASSERT_EQUAL(lines, expected);
 }
 
@@ -114,7 +175,7 @@ int main() {
   RUN_TEST(tr, TestLooping);
   RUN_TEST(tr, TestModification);
   RUN_TEST(tr, TestPageSizes);
+  RUN_TEST(tr, TestPageCounts2);
   RUN_TEST(tr, TestConstContainer);
   RUN_TEST(tr, TestPagePagination);
 }
-
