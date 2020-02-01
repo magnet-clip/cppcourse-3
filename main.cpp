@@ -4,14 +4,16 @@
 #include <set>
 #include <utility>
 #include <vector>
-// #include "test_runner.h"
 
+#ifdef TEST
+#include "test_runner.h"
+#endif
 using namespace std;
 
 template <auto N = 86400>
 class BookingManager {
  public:
-  BookingManager() : _time(-9'223'372'036'854'775'807 + N + 1) {}
+  BookingManager() : _time(std::numeric_limits<int64_t>::min() + N + 1) {}
 
   void Book(int64_t curr_time, string hotel_name, uint32_t user_id,
             int16_t room_count) {
@@ -66,116 +68,120 @@ class BookingManager {
           }
         }
       }
+      hotel.erase(hotel.begin(), curr_since);
     }
   }
 };
+#ifdef TEST
 
-// void TestSingle() {
-//   BookingManager<100> manager;
-//   ASSERT_EQUAL(manager.Clients("A"), 0);
-//   ASSERT_EQUAL(manager.Rooms("A"), 0);
+void TestSingle() {
+  BookingManager<100> manager;
+  ASSERT_EQUAL(manager.Clients("A"), 0);
+  ASSERT_EQUAL(manager.Rooms("A"), 0);
 
-//   manager.Book(0, "A", 1, 1);  // at 0 user 1 books 1 room
-//   ASSERT_EQUAL(manager.Clients("A"), 1);
-//   ASSERT_EQUAL(manager.Rooms("A"), 1);
+  manager.Book(0, "A", 1, 1);  // at 0 user 1 books 1 room
+  ASSERT_EQUAL(manager.Clients("A"), 1);
+  ASSERT_EQUAL(manager.Rooms("A"), 1);
 
-//   manager.Book(10, "A", 1, 2);  // at 10 user 1 books 2 rooms
-//   ASSERT_EQUAL(manager.Clients("A"), 1);
-//   ASSERT_EQUAL(manager.Rooms("A"), 3);
+  manager.Book(10, "A", 1, 2);  // at 10 user 1 books 2 rooms
+  ASSERT_EQUAL(manager.Clients("A"), 1);
+  ASSERT_EQUAL(manager.Rooms("A"), 3);
 
-//   manager.Book(20, "A", 2, 1);  // at 20 user 2 books 1 room
-//   ASSERT_EQUAL(manager.Clients("A"), 2);
-//   ASSERT_EQUAL(manager.Rooms("A"), 4);
+  manager.Book(20, "A", 2, 1);  // at 20 user 2 books 1 room
+  ASSERT_EQUAL(manager.Clients("A"), 2);
+  ASSERT_EQUAL(manager.Rooms("A"), 4);
 
-//   manager.Book(100, "A", 3, 3);  // at 100 user 3 books 3 rooms
-//   ASSERT_EQUAL(manager.Clients("A"), 3);
-//   ASSERT_EQUAL(manager.Rooms("A"), 6);
+  manager.Book(100, "A", 3, 3);  // at 100 user 3 books 3 rooms
+  ASSERT_EQUAL(manager.Clients("A"), 3);
+  ASSERT_EQUAL(manager.Rooms("A"), 6);
 
-//   manager.Book(105, "A", 3, 1);  // at 105 user 3 books 1 rooms
-//   ASSERT_EQUAL(manager.Clients("A"), 3);
-//   ASSERT_EQUAL(manager.Rooms("A"), 7);
+  manager.Book(105, "A", 3, 1);  // at 105 user 3 books 1 rooms
+  ASSERT_EQUAL(manager.Clients("A"), 3);
+  ASSERT_EQUAL(manager.Rooms("A"), 7);
 
-//   manager.Book(111, "A", 2, 4);  // at 111 user 2 books 4 rooms
-//   ASSERT_EQUAL(manager.Rooms("A"), 9);
-//   ASSERT_EQUAL(manager.Clients("A"), 2);
-// }
+  manager.Book(111, "A", 2, 4);  // at 111 user 2 books 4 rooms
+  ASSERT_EQUAL(manager.Rooms("A"), 9);
+  ASSERT_EQUAL(manager.Clients("A"), 2);
+}
 
-// void TestNegative() {
-//   BookingManager<100> manager;
-//   ASSERT_EQUAL(manager.Clients("A"), 0);
-//   ASSERT_EQUAL(manager.Rooms("A"), 0);
+void TestNegative() {
+  BookingManager<100> manager;
+  ASSERT_EQUAL(manager.Clients("A"), 0);
+  ASSERT_EQUAL(manager.Rooms("A"), 0);
 
-//   manager.Book(-100, "A", 1, 1);  // at 0 user 1 books 1 room
-//   ASSERT_EQUAL(manager.Clients("A"), 1);
-//   ASSERT_EQUAL(manager.Rooms("A"), 1);
+  manager.Book(-100, "A", 1, 1);  // at 0 user 1 books 1 room
+  ASSERT_EQUAL(manager.Clients("A"), 1);
+  ASSERT_EQUAL(manager.Rooms("A"), 1);
 
-//   manager.Book(-90, "A", 1, 2);  // at 10 user 1 books 2 rooms
-//   ASSERT_EQUAL(manager.Clients("A"), 1);
-//   ASSERT_EQUAL(manager.Rooms("A"), 3);
+  manager.Book(-90, "A", 1, 2);  // at 10 user 1 books 2 rooms
+  ASSERT_EQUAL(manager.Clients("A"), 1);
+  ASSERT_EQUAL(manager.Rooms("A"), 3);
 
-//   manager.Book(-80, "A", 2, 1);  // at 20 user 2 books 1 room
-//   ASSERT_EQUAL(manager.Clients("A"), 2);
-//   ASSERT_EQUAL(manager.Rooms("A"), 4);
+  manager.Book(-80, "A", 2, 1);  // at 20 user 2 books 1 room
+  ASSERT_EQUAL(manager.Clients("A"), 2);
+  ASSERT_EQUAL(manager.Rooms("A"), 4);
 
-//   manager.Book(0, "A", 3, 3);  // at 100 user 3 books 3 rooms
-//   ASSERT_EQUAL(manager.Clients("A"), 3);
-//   ASSERT_EQUAL(manager.Rooms("A"), 6);
+  manager.Book(0, "A", 3, 3);  // at 100 user 3 books 3 rooms
+  ASSERT_EQUAL(manager.Clients("A"), 3);
+  ASSERT_EQUAL(manager.Rooms("A"), 6);
 
-//   manager.Book(5, "A", 3, 1);  // at 105 user 3 books 1 rooms
-//   ASSERT_EQUAL(manager.Clients("A"), 3);
-//   ASSERT_EQUAL(manager.Rooms("A"), 7);
+  manager.Book(5, "A", 3, 1);  // at 105 user 3 books 1 rooms
+  ASSERT_EQUAL(manager.Clients("A"), 3);
+  ASSERT_EQUAL(manager.Rooms("A"), 7);
 
-//   manager.Book(11, "A", 2, 4);  // at 111 user 2 books 4 rooms
-//   ASSERT_EQUAL(manager.Rooms("A"), 9);
-//   ASSERT_EQUAL(manager.Clients("A"), 2);
-// }
+  manager.Book(11, "A", 2, 4);  // at 111 user 2 books 4 rooms
+  ASSERT_EQUAL(manager.Rooms("A"), 9);
+  ASSERT_EQUAL(manager.Clients("A"), 2);
+}
 
-// void TestSimple() {
-//   BookingManager manager;
+void TestSimple() {
+  BookingManager manager;
 
-//   // CLIENTS Marriott
-//   ASSERT_EQUAL(manager.Clients("Marriott"), 0);
+  // CLIENTS Marriott
+  ASSERT_EQUAL(manager.Clients("Marriott"), 0);
 
-//   // ROOMS Marriott
-//   ASSERT_EQUAL(manager.Rooms("Marriott"), 0);
+  // ROOMS Marriott
+  ASSERT_EQUAL(manager.Rooms("Marriott"), 0);
 
-//   // BOOK 10 FourSeasons 1 2
-//   manager.Book(10, "FourSeasons", 1, 2);
+  // BOOK 10 FourSeasons 1 2
+  manager.Book(10, "FourSeasons", 1, 2);
 
-//   // BOOK 10 Marriott 1 1
-//   manager.Book(10, "Marriott", 1, 1);
+  // BOOK 10 Marriott 1 1
+  manager.Book(10, "Marriott", 1, 1);
 
-//   // BOOK 86409 FourSeasons 2 1
-//   manager.Book(86409, "FourSeasons", 2, 1);
+  // BOOK 86409 FourSeasons 2 1
+  manager.Book(86409, "FourSeasons", 2, 1);
 
-//   // CLIENTS FourSeasons
-//   ASSERT_EQUAL(manager.Clients("FourSeasons"), 2);
+  // CLIENTS FourSeasons
+  ASSERT_EQUAL(manager.Clients("FourSeasons"), 2);
 
-//   // ROOMS FourSeasons
-//   ASSERT_EQUAL(manager.Rooms("FourSeasons"), 3);
+  // ROOMS FourSeasons
+  ASSERT_EQUAL(manager.Rooms("FourSeasons"), 3);
 
-//   // CLIENTS Marriott
-//   ASSERT_EQUAL(manager.Clients("Marriott"), 1);
+  // CLIENTS Marriott
+  ASSERT_EQUAL(manager.Clients("Marriott"), 1);
 
-//   // BOOK 86410 Marriott 2 10
-//   manager.Book(86410, "Marriott", 2, 10);
+  // BOOK 86410 Marriott 2 10
+  manager.Book(86410, "Marriott", 2, 10);
 
-//   // ROOMS FourSeasons
-//   ASSERT_EQUAL(manager.Rooms("FourSeasons"), 1);
+  // ROOMS FourSeasons
+  ASSERT_EQUAL(manager.Rooms("FourSeasons"), 1);
 
-//   // ROOMS Marriott
-//   ASSERT_EQUAL(manager.Rooms("Marriott"), 10);
-// }
+  // ROOMS Marriott
+  ASSERT_EQUAL(manager.Rooms("Marriott"), 10);
+}
 
-// void TestAll() {
-//   TestRunner tr;
-//   RUN_TEST(tr, TestSingle);
-//   RUN_TEST(tr, TestSimple);
-//   RUN_TEST(tr, TestNegative);
-// }
-
+void TestAll() {
+  TestRunner tr;
+  RUN_TEST(tr, TestSingle);
+  RUN_TEST(tr, TestSimple);
+  RUN_TEST(tr, TestNegative);
+}
+#endif
 int main() {
-  // TestAll();
+#ifdef TEST
+  TestAll();
+#endif
 
   ios::sync_with_stdio(false);
   cin.tie(nullptr);
