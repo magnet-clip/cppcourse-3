@@ -41,7 +41,7 @@ class BookingManager {
   void Book(int64_t curr_time, string hotel_name, uint32_t user_id,
             uint16_t room_count) {
     const auto new_last_time = curr_time - N;
-    while (_events.front().time <= new_last_time) {
+    while (!_events.empty() && _events.front().time <= new_last_time) {
       const auto& last_event = _events.front();
 
       auto& last_hotel = _aggregated[last_event.hotel_name];
