@@ -1,76 +1,79 @@
+#include <deque>
 #include <iomanip>
 #include <iostream>
 #include <map>
-#include <set>
-#include <utility>
-#include <vector>
 
+//#define TEST
 #ifdef TEST
 #include "test_runner.h"
 #endif
 using namespace std;
 
+struct ReservationEvent {
+  int64_t time;
+  string hotel_name;
+  uint32_t user_id;
+  uint16_t room_number;
+};
+
+struct AggregatedReservation {
+  uint32_t room_count;
+
+  void DecreaseUserCount(uint32_t user_id) {
+    if (--user_counts[user_id] == 0) {
+      user_counts.erase(user_id);
+    }
+  }
+
+  inline void IncreaseUserCount(uint32_t user_id) { user_counts[user_id] += 1; }
+
+  inline size_t GetUserCount() const { return user_counts.size(); }
+
+ private:
+  map<uint32_t, uint32_t> user_counts;
+};
+
 template <auto N = 86400>
 class BookingManager {
  public:
-  BookingManager() : _time(std::numeric_limits<int64_t>::min() + N + 1) {}
+  BookingManager() {}
 
   void Book(int64_t curr_time, string hotel_name, uint32_t user_id,
-            int16_t room_count) {
-    auto prev_time = _time;
-    _time = curr_time;
+            uint16_t room_count) {
+    const auto new_last_time = curr_time - N;
+    while (_events.front().time <= new_last_time) {
+      const auto& last_event = _events.front();
 
-    auto& hotel = _booking[hotel_name];
+      auto& last_hotel = _aggregated[last_event.hotel_name];
+      last_hotel.room_count -= last_event.room_number;
+      last_hotel.DecreaseUserCount(last_event.user_id);
 
-    auto& [rooms, client] = hotel[curr_time];
-    rooms += room_count;
-    client.insert(user_id);
+      _events.pop_front();
+    }
 
-    auto& [agg_rooms, agg_guests] = _aggregated[hotel_name];
-    agg_guests[user_id] += 1;
-    agg_rooms += room_count;
-
-    UpdateAggregates(curr_time, prev_time);
+    _events.push_back({curr_time, hotel_name, user_id, room_count});
+    auto& new_hotel = _aggregated[hotel_name];
+    new_hotel.room_count += room_count;
+    new_hotel.IncreaseUserCount(user_id);
   }
 
   uint32_t Clients(string hotel_name) const {
     if (!_aggregated.count(hotel_name)) return 0;
     auto& hotel = _aggregated.at(hotel_name);
-    return hotel.second.size();
+    return hotel.GetUserCount();
   }
 
   uint32_t Rooms(string hotel_name) const {
     if (!_aggregated.count(hotel_name)) return 0;
     auto& hotel = _aggregated.at(hotel_name);
-    return hotel.first;
+    return hotel.room_count;
   }
 
  private:
-  int64_t _time;
-  map<string, map<int64_t, pair<uint32_t, set<uint32_t>>>> _booking;
-  map<string, pair<uint32_t, map<uint32_t, uint32_t>>> _aggregated;
+  deque<ReservationEvent> _events;
 
-  void UpdateAggregates(int64_t curr_time, int64_t prev_time) {
-    for (auto& [hotel_name, hotel] : _booking) {
-      auto prev_since = hotel.upper_bound(prev_time - N);
-      auto curr_since = hotel.upper_bound(curr_time - N);
-
-      auto& [agg_rooms, agg_guests] = _aggregated[hotel_name];
-      for (auto& it = prev_since; it != curr_since; it++) {
-        const auto& [removed_rooms, removed_users] = it->second;
-        agg_rooms -= removed_rooms;
-        for (auto& removed_user_id : removed_users) {
-          if (agg_guests.count(removed_user_id)) {
-            agg_guests[removed_user_id] -= 1;
-            if (agg_guests[removed_user_id] == 0) {
-              agg_guests.erase(removed_user_id);
-            }
-          }
-        }
-      }
-      hotel.erase(hotel.begin(), curr_since);
-    }
-  }
+  // hotel name -> AggregatedReservation
+  map<string, AggregatedReservation> _aggregated;
 };
 #ifdef TEST
 
