@@ -33,9 +33,10 @@ public:
   double Cheer(int user_id) const {}
 
 private:
-  map<int, int> _users_pages;
-  map<int, int> _number_of_users_with_pages;
-  set<int> _pages_counts;
+  map<int, int> _users_pages;                // user -> page count
+  map<int, int> _number_of_users_with_pages; // page count -> number of users
+                                             // with this count of pages
+  set<int> _pages_counts;                    // distinct pages count
 };
 
 void TestAll() {}
