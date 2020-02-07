@@ -1,70 +1,56 @@
+#include <list>
+#include <map>
+#include <string>
+#include <vector>
 #include "test_runner.h"
 
-#include <array>
-#include <iostream>
-#include <list>
-#include <queue>
-#include <set>
-#include <string>
 using namespace std;
 
-const int MAX_QUEUE = 100'001;
-
-class PosManager {
-  using Position = list<int>::iterator;
-  array<Position, MAX_QUEUE> _positions;
-  list<int> _players;
-
+class Translator {
  public:
-  PosManager() { _positions.fill(_players.end()); }
-
-  void Insert(int number, int prev) {
-    Position prev_position = _positions[prev];
-    Position curr_position = _players.insert(prev_position, number);
-    _positions[number] = curr_position;
+  void Add(string_view source, string_view target) {
+    if (!_fwd.count(source)) {
+      auto source_string = string(source);
+      _words.push_back(source_string);
+      source = _words.back();
+    }
+    if (!_rwd.count(target)) {
+      auto target_string = string(target);
+      _words.push_back(target_string);
+      target = _words.back();
+    }
+    _fwd[source] = target;
+    _rwd[target] = source;
   }
 
-  const list<int>& Get() const { return _players; }
+  string_view TranslateForward(string_view source) const {
+    if (_fwd.count(source)) return _fwd.at(source);
+    return "";
+  }
+
+  string_view TranslateBackward(string_view target) const {
+    if (_rwd.count(target)) return _rwd.at(target);
+    return "";
+  }
+
+ private:
+  list<string> _words;
+  map<string_view, string_view> _fwd;
+  map<string_view, string_view> _rwd;
 };
 
-void TestAsInSample() {
-  PosManager pm;
-  pm.Insert(42, 0);
-  pm.Insert(17, 42);
-  pm.Insert(13, 0);
-  pm.Insert(123, 42);
-  pm.Insert(5, 13);
+void TestSimple() {
+  Translator translator;
+  translator.Add(string("okno"), string("window"));
+  translator.Add(string("stol"), string("table"));
 
-  const auto res = pm.Get();
-  const auto vec = vector<int>(res.begin(), res.end());
-  ASSERT_EQUAL(vec, vector<int>({17, 123, 42, 5, 13}));
-}
-
-void TestEmpty() {
-  PosManager pm;
-
-  const auto res = pm.Get();
-  const auto vec = vector<int>(res.begin(), res.end());
-  ASSERT_EQUAL(vec, vector<int>({}));
+  ASSERT_EQUAL(translator.TranslateForward("okno"), "window");
+  ASSERT_EQUAL(translator.TranslateBackward("table"), "stol");
+  ASSERT_EQUAL(translator.TranslateBackward("stol"), "");
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestEmpty);
-  RUN_TEST(tr, TestAsInSample);
-
-  int num;
-  cin >> num;
-  PosManager pm;
-
-  while (num-- > 0) {
-    int cur, prev;
-    cin >> cur >> prev;
-    pm.Insert(cur, prev);
-  }
-
-  for (const auto& item : pm.Get()) {
-    cout << item << " ";
-  }
+  RUN_TEST(tr, TestSimple);
   return 0;
 }
