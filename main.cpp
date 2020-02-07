@@ -1,100 +1,70 @@
 #include "test_runner.h"
 
-#include <algorithm>
+#include <array>
 #include <iostream>
+#include <list>
 #include <queue>
 #include <set>
-#include <stdexcept>
 #include <string>
 using namespace std;
 
-template <class T>
-class ObjectPool {
+const int MAX_QUEUE = 100'001;
+
+class PosManager {
+  using Position = list<int>::iterator;
+  array<Position, MAX_QUEUE> _positions;
+  list<int> _players;
+
  public:
-  T* Allocate();
-  T* TryAllocate();
+  PosManager() { _positions.fill(_players.end()); }
 
-  void Deallocate(T* object);
+  void Insert(int number, int prev) {
+    Position prev_position = _positions[prev];
+    Position curr_position = _players.insert(prev_position, number);
+    _positions[number] = curr_position;
+  }
 
-  ~ObjectPool();
-
- private:
-  queue<T*> _freed;
-  set<T*> _allocated;
+  const list<int>& Get() const { return _players; }
 };
 
-template <class T>
-T* ObjectPool<T>::Allocate() {
-  T* res;
-  if (!_freed.empty()) {
-    res = _freed.front();
-    _freed.pop();
-  } else {
-    res = new T;
-  }
-  _allocated.insert(res);
-  return res;
+void TestAsInSample() {
+  PosManager pm;
+  pm.Insert(42, 0);
+  pm.Insert(17, 42);
+  pm.Insert(13, 0);
+  pm.Insert(123, 42);
+  pm.Insert(5, 13);
+
+  const auto res = pm.Get();
+  const auto vec = vector<int>(res.begin(), res.end());
+  ASSERT_EQUAL(vec, vector<int>({17, 123, 42, 5, 13}));
 }
 
-template <class T>
-T* ObjectPool<T>::TryAllocate() {
-  if (!_freed.empty()) {
-    auto res = _freed.front();
-    _freed.pop();
-    _allocated.insert(res);
-    return res;
-  } else {
-    return nullptr;
-  }
-}
+void TestEmpty() {
+  PosManager pm;
 
-template <class T>
-void ObjectPool<T>::Deallocate(T* object) {
-  if (_allocated.count(object)) {
-    _allocated.erase(object);
-    _freed.push(object);
-  } else {
-    throw invalid_argument("object not in pool");
-  }
-}
-
-template <class T>
-ObjectPool<T>::~ObjectPool() {
-  while (!_freed.empty()) {
-    auto obj = _freed.front();
-    delete obj;
-    _freed.pop();
-  }
-
-  for (auto obj : _allocated) {
-    delete obj;
-  }
-}
-
-void TestObjectPool() {
-  ObjectPool<string> pool;
-
-  auto p1 = pool.Allocate();
-  auto p2 = pool.Allocate();
-  auto p3 = pool.Allocate();
-
-  *p1 = "first";
-  *p2 = "second";
-  *p3 = "third";
-
-  pool.Deallocate(p2);
-  ASSERT_EQUAL(*pool.Allocate(), "second");
-
-  pool.Deallocate(p3);
-  pool.Deallocate(p1);
-  ASSERT_EQUAL(*pool.Allocate(), "third");
-  ASSERT_EQUAL(*pool.Allocate(), "first");
-
-  pool.Deallocate(p1);
+  const auto res = pm.Get();
+  const auto vec = vector<int>(res.begin(), res.end());
+  ASSERT_EQUAL(vec, vector<int>({}));
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestObjectPool);
+  RUN_TEST(tr, TestEmpty);
+  RUN_TEST(tr, TestAsInSample);
+
+  int num;
+  cin >> num;
+  PosManager pm;
+
+  while (num-- > 0) {
+    int cur, prev;
+    cin >> cur >> prev;
+    pm.Insert(cur, prev);
+  }
+
+  for (const auto& item : pm.Get()) {
+    cout << item << " ";
+  }
   return 0;
 }
