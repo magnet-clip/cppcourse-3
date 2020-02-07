@@ -9,42 +9,125 @@
 
 using namespace std;
 
+template <typename TAirport>
+class AirportIteratorManager {
+ public:
+  class AirportConstIterator {
+   public:
+    AirportConstIterator(const AirportConstIterator& another)
+        : _position(another._position),
+          _airports(another._airports),
+          _data(another._data) {}
+
+    AirportConstIterator(size_t position, const vector<size_t>* airports)
+        : _position(position),
+          _airports(airports),
+          _data(make_pair(static_cast<TAirport>(_position),
+                          (*_airports)[_position])) {}
+
+    AirportConstIterator operator++() {
+      AirportConstIterator me = *this;
+      _position++;
+      _data =
+          make_pair(static_cast<TAirport>(_position), (*_airports)[_position]);
+      return me;
+    }
+
+    pair<TAirport, size_t>& operator*() { return _data; }
+
+    pair<TAirport, size_t>* operator->() { return &_data; }
+
+    bool operator==(const AirportConstIterator& rhs) {
+      return _position == rhs._position;
+    }
+
+    bool operator!=(const AirportConstIterator& rhs) {
+      return _position != rhs._position;
+    }
+
+   private:
+    size_t _position;
+    const vector<size_t>* _airports;
+    pair<TAirport, size_t> _data;
+  };
+
+  AirportIteratorManager(const vector<size_t>& airports)
+      : _airports(airports) {}
+
+  const AirportConstIterator begin() const {
+    return AirportConstIterator(0, &_airports);
+  }
+  const AirportConstIterator end() const {
+    return AirportConstIterator(_airports.size(), &_airports);
+  }
+
+ private:
+  const vector<size_t> _airports;
+};
+
 // TAirport should be enum with sequential items and last item TAirport::Last_
 template <typename TAirport>
 class AirportCounter {
  public:
   // конструктор по умолчанию: список элементов пока пуст
-  AirportCounter();
+  AirportCounter() : _airports(static_cast<size_t>(TAirport::Last_), 0) {}
 
   // конструктор от диапазона элементов типа TAirport
   template <typename TIterator>
-  AirportCounter(TIterator begin, TIterator end);
+  AirportCounter(TIterator begin, TIterator end) : AirportCounter() {
+    for (auto it = begin; it != end; it++) {
+      _airports[static_cast<size_t>(*it)]++;
+    }
+  }
 
   // получить количество элементов, равных данному
-  size_t Get(TAirport airport) const;
+  size_t Get(TAirport airport) const {
+    return _airports[static_cast<size_t>(airport)];
+  }
 
   // добавить данный элемент
-  void Insert(TAirport airport);
+  void Insert(TAirport airport) { _airports[static_cast<size_t>(airport)]++; }
 
   // удалить одно вхождение данного элемента
-  void EraseOne(TAirport airport);
+  void EraseOne(TAirport airport) { _airports[static_cast<size_t>(airport)]--; }
 
   // удалить все вхождения данного элемента
-  void EraseAll(TAirport airport);
+  void EraseAll(TAirport airport) {
+    _airports[static_cast<size_t>(airport)] = 0;
+  }
 
   using Item = pair<TAirport, size_t>;
-  using Items = /* ??? */;
+  using Items = AirportIteratorManager<TAirport>;
 
   // получить некоторый объект, по которому можно проитерироваться,
   // получив набор объектов типа Item - пар (аэропорт, количество),
   // упорядоченных по аэропорту
-  Items GetItems() const;
+  Items GetItems() const { return AirportIteratorManager<TAirport>(_airports); }
 
  private:
-  // ???
+  vector<size_t> _airports;
 };
 
+// void TestRustam() {
+//   enum class MoscowAirport { VKO, SVO, DME, ZIA, Last_ };
+//   const vector<MoscowAirport> airports = {
+//       MoscowAirport::SVO,
+//       MoscowAirport::VKO,
+//       MoscowAirport::ZIA,
+//       MoscowAirport::SVO,
+//   };
+//   AirportCounter<MoscowAirport> airport_counter(begin(airports),
+//   end(airports)); using Item = AirportCounter<MoscowAirport>::Item;
+//   vector<Item> items;
+//   for (const auto& item : airport_counter.GetItems()) {
+//     items.push_back(item);
+//   }
+//   ASSERT_EQUAL(items.size(), 4);
+//   ASSERT_EQUAL(items[0].first, )
+// }
+
 void TestMoscow() {
+  LOG_DURATION("TestMoscow")
   enum class MoscowAirport { VKO, SVO, DME, ZIA, Last_ };
 
   const vector<MoscowAirport> airports = {
@@ -109,6 +192,7 @@ enum class SmallCountryAirports {
 };
 
 void TestManyConstructions() {
+  LOG_DURATION("TestManyConstructions")
   default_random_engine rnd(20180623);
   uniform_int_distribution<size_t> gen_airport(
       0, static_cast<size_t>(SmallCountryAirports::Last_) - 1);
@@ -131,6 +215,7 @@ void TestManyConstructions() {
 enum class SmallTownAirports { Airport_1, Airport_2, Last_ };
 
 void TestManyGetItems() {
+  LOG_DURATION("TestManyGetItems")
   default_random_engine rnd(20180701);
   uniform_int_distribution<size_t> gen_airport(
       0, static_cast<size_t>(SmallTownAirports::Last_) - 1);
@@ -153,6 +238,7 @@ void TestManyGetItems() {
 }
 
 void TestMostPopularAirport() {
+  LOG_DURATION("TestMostPopularAirport")
   default_random_engine rnd(20180624);
   uniform_int_distribution<size_t> gen_airport(
       0, static_cast<size_t>(SmallCountryAirports::Last_) - 1);
