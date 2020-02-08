@@ -1,158 +1,89 @@
-#include <list>
-#include <string>
 #include "test_runner.h"
+#include "http_request.h"
+#include "stats.h"
+
+#include <map>
+#include <string_view>
 using namespace std;
 
-class Editor {
- public:
-  // Реализуйте конструктор по умолчанию и объявленные методы
-  Editor() : _position(_text.begin()) {}
-
-  void Left() {
-    if (_position != _text.begin()) _position = prev(_position);
+Stats ServeRequests(istream& input) {
+  Stats result;
+  for (string line; getline(input, line); ) {
+    const HttpRequest req = ParseRequest(line);
+    result.AddUri(req.uri);
+    result.AddMethod(req.method);
   }
-
-  void Right() {
-    if (_position != _text.end()) _position = next(_position);
-  }
-
-  void Insert(char token) { _text.insert(_position, token); }
-
-  void Cut(size_t tokens = 1) {
-    _clipboard.clear();
-    if (tokens == 0) return;
-
-    size_t distance_till_end = distance(_position, _text.end());
-    size_t count = distance_till_end < tokens ? distance_till_end : tokens;
-
-    if (_position == _text.begin()) {
-      _clipboard.splice(_clipboard.begin(), _text, _position,
-                        next(_position, count));
-      _position = _text.begin();
-    } else {
-      auto step_back = prev(_position);
-      _clipboard.splice(_clipboard.begin(), _text, _position,
-                        next(_position, count));
-      _position = next(step_back);
-    }
-  }
-
-  void Copy(size_t tokens = 1) {
-    _clipboard.clear();
-
-    if (tokens == 0) return;
-    size_t distance_till_end = distance(_position, _text.end());
-    size_t count = distance_till_end < tokens ? distance_till_end : tokens;
-    _clipboard.insert(_clipboard.begin(), _position, next(_position, count));
-  }
-
-  void Paste() {
-    _text.insert(_position, _clipboard.begin(), _clipboard.end());
-  }
-
-  string GetText() const { return string(_text.begin(), _text.end()); }
-
- private:
-  list<char> _text;
-  list<char>::iterator _position;
-  list<char> _clipboard;
-};
-
-void TypeText(Editor& editor, const string& text) {
-  for (char c : text) {
-    editor.Insert(c);
-  }
+  return result;
 }
 
-void TestEditing() {
-  {
-    Editor editor;
+void TestBasic() {
+  const string input =
+    R"(GET / HTTP/1.1
+    POST /order HTTP/1.1
+    POST /product HTTP/1.1
+    POST /product HTTP/1.1
+    POST /product HTTP/1.1
+    GET /order HTTP/1.1
+    PUT /product HTTP/1.1
+    GET /basket HTTP/1.1
+    DELETE /product HTTP/1.1
+    GET / HTTP/1.1
+    GET / HTTP/1.1
+    GET /help HTTP/1.1
+    GET /upyachka HTTP/1.1
+    GET /unexpected HTTP/1.1
+    HEAD / HTTP/1.1)";
 
-    const size_t text_len = 12;
-    const size_t first_part_len = 7;
-    TypeText(editor, "hello, world");
-    for (size_t i = 0; i < text_len; ++i) {
-      editor.Left();
-    }
-    editor.Cut(first_part_len);
-    for (size_t i = 0; i < text_len - first_part_len; ++i) {
-      editor.Right();
-    }
-    TypeText(editor, ", ");
-    editor.Paste();
-    editor.Left();
-    editor.Left();
-    editor.Cut(3);
+  const map<string_view, int> expected_method_count = {
+    {"GET", 8},
+    {"PUT", 1},
+    {"POST", 4},
+    {"DELETE", 1},
+    {"UNKNOWN", 1},
+  };
+  const map<string_view, int> expected_url_count = {
+    {"/", 4},
+    {"/order", 2},
+    {"/product", 5},
+    {"/basket", 1},
+    {"/help", 1},
+    {"unknown", 2},
+  };
 
-    ASSERT_EQUAL(editor.GetText(), "world, hello");
-  }
+  istringstream is(input);
+  const Stats stats = ServeRequests(is);
 
-  {
-    Editor editor;
-
-    TypeText(editor, "misprnit");
-    editor.Left();
-    editor.Left();
-    editor.Left();
-    editor.Cut(1);
-    editor.Right();
-    editor.Paste();
-
-    ASSERT_EQUAL(editor.GetText(), "misprint");
-  }
+  ASSERT_EQUAL(stats.GetMethodStats(), expected_method_count);
+  ASSERT_EQUAL(stats.GetUriStats(), expected_url_count);
 }
 
-void TestReverse() {
-  Editor editor;
+void TestAbsentParts() {
+  // Методы GetMethodStats и GetUriStats должны возвращать словари
+  // с полным набором ключей, даже если какой-то из них не встречался
 
-  const string text = "esreveR";
-  for (char c : text) {
-    editor.Insert(c);
-    editor.Left();
-  }
+  const map<string_view, int> expected_method_count = {
+    {"GET", 0},
+    {"PUT", 0},
+    {"POST", 0},
+    {"DELETE", 0},
+    {"UNKNOWN", 0},
+  };
+  const map<string_view, int> expected_url_count = {
+    {"/", 0},
+    {"/order", 0},
+    {"/product", 0},
+    {"/basket", 0},
+    {"/help", 0},
+    {"unknown", 0},
+  };
+  const Stats default_constructed;
 
-  ASSERT_EQUAL(editor.GetText(), "Reverse");
-}
-
-void TestNoText() {
-  Editor editor;
-  ASSERT_EQUAL(editor.GetText(), "");
-
-  editor.Left();
-  editor.Left();
-  editor.Right();
-  editor.Right();
-  editor.Copy(0);
-  editor.Cut(0);
-  editor.Paste();
-
-  ASSERT_EQUAL(editor.GetText(), "");
-}
-
-void TestEmptyBuffer() {
-  Editor editor;
-
-  editor.Paste();
-  TypeText(editor, "example");
-  editor.Left();
-  editor.Left();
-  editor.Paste();
-  editor.Right();
-  editor.Paste();
-  editor.Copy(0);
-  editor.Paste();
-  editor.Left();
-  editor.Cut(0);
-  editor.Paste();
-
-  ASSERT_EQUAL(editor.GetText(), "example");
+  ASSERT_EQUAL(default_constructed.GetMethodStats(), expected_method_count);
+  ASSERT_EQUAL(default_constructed.GetUriStats(), expected_url_count);
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestEditing);
-  RUN_TEST(tr, TestReverse);
-  RUN_TEST(tr, TestNoText);
-  RUN_TEST(tr, TestEmptyBuffer);
-  return 0;
+  RUN_TEST(tr, TestBasic);
+  RUN_TEST(tr, TestAbsentParts);
 }
