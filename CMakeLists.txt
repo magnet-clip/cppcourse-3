@@ -10,5 +10,5 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 project (main)
 include_directories(${PROJECT_SOURCE_DIR})
-add_executable(main main.cpp)
+add_executable(main main.cpp stats.cpp)
 set_property(TARGET main PROPERTY CXX_STANDARD 17)
