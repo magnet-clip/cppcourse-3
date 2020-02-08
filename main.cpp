@@ -10,16 +10,17 @@ using namespace std;
 template <typename RandomIt>
 void MakeJosephusPermutation(RandomIt first, RandomIt last,
                              uint32_t step_size) {
-  vector<typename RandomIt::value_type> pool(first, last);
-  size_t cur_pos = 0;
-  while (!pool.empty()) {
-    *(first++) = pool[cur_pos];
-    pool.erase(pool.begin() + cur_pos);
-    if (pool.empty()) {
-      break;
-    }
-    cur_pos = (cur_pos + step_size - 1) % pool.size();
-  }
+  // vector<typename RandomIt::value_type> pool(
+  //     first, last);  // making a copy and doing a cleanup
+  // size_t cur_pos = 0;
+  // while (!pool.empty()) {
+  //   *(first++) = pool[cur_pos];
+  //   pool.erase(pool.begin() + cur_pos);
+  //   if (pool.empty()) {
+  //     break;
+  //   }
+  //   cur_pos = (cur_pos + step_size - 1) % pool.size();
+  // }
 }
 
 vector<int> MakeTestVector() {
