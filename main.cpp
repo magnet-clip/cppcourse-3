@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <iterator>
+#include <list>
+#include <map>
 #include <numeric>
 #include <vector>
 
@@ -10,17 +12,24 @@ using namespace std;
 template <typename RandomIt>
 void MakeJosephusPermutation(RandomIt first, RandomIt last,
                              uint32_t step_size) {
-  // vector<typename RandomIt::value_type> pool(
-  //     first, last);  // making a copy and doing a cleanup
-  // size_t cur_pos = 0;
-  // while (!pool.empty()) {
-  //   *(first++) = pool[cur_pos];
-  //   pool.erase(pool.begin() + cur_pos);
-  //   if (pool.empty()) {
-  //     break;
-  //   }
-  //   cur_pos = (cur_pos + step_size - 1) % pool.size();
-  // }
+  const size_t count = distance(first, last);
+  vector<size_t> positions(count);
+  iota(positions.begin(), positions.end(), 0);
+  list<typename RandomIt::value_type> holder;
+
+  size_t pos = 0;
+
+  while (!positions.empty()) {
+    holder.push_back(move(*(first + positions[pos])));
+    positions.erase(positions.begin() + pos);
+    if (positions.empty()) break;
+    pos = (pos + step_size - 1) % positions.size();
+  }
+
+  while (!holder.empty()) {
+    *(first++) = move(holder.front());
+    holder.pop_front();
+  }
 }
 
 vector<int> MakeTestVector() {
