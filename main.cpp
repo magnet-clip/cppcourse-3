@@ -51,7 +51,7 @@ public:
   template <typename ObjInputIt, typename IdOutputIt>
   void Add(ObjInputIt range_begin, ObjInputIt range_end, IdOutputIt ids_begin) {
     for (auto it = range_begin; it != range_end; it++) {
-      *ids_begin++ = Add(*it);
+      *ids_begin++ = Add(move(*it));
     }
   }
 
@@ -60,7 +60,7 @@ public:
   bool IsValid(Id id) const { return _references.count(id); }
 
   // Получить объект по идентификатору
-  const T &Get(Id id) const { return (_references.at(id))->first; }
+  const T &Get(Id id) const { return (_references.at(id))->value; }
 
   // Увеличить приоритет объекта на 1
   void Promote(Id id) {
@@ -71,7 +71,10 @@ public:
   }
 
   // Получить объект с максимальным приоритетом и его приоритет
-  pair<const T &, int> GetMax() const;
+  pair<const T &, int> GetMax() const {
+    auto item = _pool.begin();
+    return {item->value, item->priority};
+  }
 
   // Аналогично GetMax, но удаляет элемент из контейнера
   pair<T, int> PopMax() {
@@ -103,6 +106,47 @@ void TestNoCopy() {
   }
   strings.Promote(yellow_id);
   {
+    const auto love = strings.GetMax();
+    ASSERT_EQUAL(love.first, "red");
+    ASSERT_EQUAL(love.second, 2);
+
+    const auto item = strings.PopMax();
+    ASSERT_EQUAL(item.first, "red");
+    ASSERT_EQUAL(item.second, 2);
+  }
+  {
+    const auto item = strings.PopMax();
+    ASSERT_EQUAL(item.first, "yellow");
+    ASSERT_EQUAL(item.second, 2);
+  }
+  {
+    const auto item = strings.PopMax();
+    ASSERT_EQUAL(item.first, "white");
+    ASSERT_EQUAL(item.second, 0);
+  }
+}
+
+void TestNoCopy2() {
+  vector<StringNonCopyable> temp_strings;
+  PriorityCollection<StringNonCopyable> strings;
+  temp_strings.push_back("white");
+  temp_strings.push_back("yellow");
+  temp_strings.push_back("red");
+
+  vector<int> ids(3);
+  strings.Add(temp_strings.begin(), temp_strings.end(), ids.begin());
+  const auto white_id = ids[0];
+  const auto yellow_id = ids[1];
+  const auto red_id = ids[2];
+
+  ASSERT_EQUAL(strings.Get(ids[0]), "white");
+
+  strings.Promote(yellow_id);
+  for (int i = 0; i < 2; ++i) {
+    strings.Promote(red_id);
+  }
+  strings.Promote(yellow_id);
+  {
     const auto item = strings.PopMax();
     ASSERT_EQUAL(item.first, "red");
     ASSERT_EQUAL(item.second, 2);
@@ -122,5 +166,6 @@ void TestNoCopy() {
 int main() {
   TestRunner tr;
   RUN_TEST(tr, TestNoCopy);
+  RUN_TEST(tr, TestNoCopy2);
   return 0;
 }
