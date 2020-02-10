@@ -1,144 +1,47 @@
 #include "test_runner.h"
-
+#include <algorithm>
+#include <memory>
 #include <vector>
+
 using namespace std;
 
-template <typename T> class LinkedList {
+class NonCopyableInt {
 public:
-  struct Node {
-    T value;
-    Node *next = nullptr;
-  };
-
-  ~LinkedList() {
-    while (head != nullptr) {
-      auto last_head = head;
-      head = head->next;
-      delete last_head;
-    }
-  }
-
-  void PushFront(const T &value) { head = new Node({value, head}); }
-
-  void InsertAfter(Node *node, const T &value) {
-    if (node == nullptr) {
-      PushFront(value);
-    } else {
-      node->next = new Node({value, node->next});
-    }
-  }
-
-  void RemoveAfter(Node *node) {
-    if (node == nullptr) {
-      PopFront();
-      return;
-    }
-
-    auto next = node->next;
-
-    if (next == nullptr) {
-      return;
-    }
-
-    node->next = next->next;
-    delete next;
-  };
-
-  void PopFront() {
-    if (head == nullptr) {
-      return;
-    }
-
-    auto next = head->next;
-    delete head;
-    head = next;
-  }
-
-  Node *GetHead() { return head; }
-  const Node *GetHead() const { return head; }
-
-private:
-  Node *head = nullptr;
+  int value;
+  NonCopyableInt(const NonCopyableInt &) = delete;
+  NonCopyableInt &operator=(const NonCopyableInt &) = delete;
+  NonCopyableInt(NonCopyableInt &&) = default;
+  NonCopyableInt &operator=(NonCopyableInt &&) = default;
 };
 
-template <typename T> vector<T> ToVector(const LinkedList<T> &list) {
-  vector<T> result;
-  for (auto node = list.GetHead(); node; node = node->next) {
-    result.push_back(node->value);
-  }
-  return result;
+template <typename RandomIt>
+void MergeSort(RandomIt range_begin, RandomIt range_end) {
+  // Напишите реализацию функции,
+  // не копируя сортируемые элементы
 }
 
-void TestPushFront() {
-  LinkedList<int> list;
-
-  list.PushFront(1);
-  ASSERT_EQUAL(list.GetHead()->value, 1);
-  list.PushFront(2);
-  ASSERT_EQUAL(list.GetHead()->value, 2);
-  list.PushFront(3);
-  ASSERT_EQUAL(list.GetHead()->value, 3);
-
-  const vector<int> expected = {3, 2, 1};
-  ASSERT_EQUAL(ToVector(list), expected);
+void TestIntVector() {
+  vector<int> numbers = {6, 1, 3, 9, 1, 9, 8, 12, 1};
+  MergeSort(begin(numbers), end(numbers));
+  ASSERT(is_sorted(begin(numbers), end(numbers)));
 }
 
-void TestInsertAfter() {
-  LinkedList<string> list;
-
-  list.PushFront("a");
-  auto head = list.GetHead();
-  ASSERT(head);
-  ASSERT_EQUAL(head->value, "a");
-
-  list.InsertAfter(head, "b");
-  const vector<string> expected1 = {"a", "b"};
-  ASSERT_EQUAL(ToVector(list), expected1);
-
-  list.InsertAfter(head, "c");
-  const vector<string> expected2 = {"a", "c", "b"};
-  ASSERT_EQUAL(ToVector(list), expected2);
-}
-
-void TestRemoveAfter() {
-  LinkedList<int> list;
-  for (int i = 1; i <= 5; ++i) {
-    list.PushFront(i);
-  }
-
-  const vector<int> expected = {5, 4, 3, 2, 1};
-  ASSERT_EQUAL(ToVector(list), expected);
-
-  auto next_to_head = list.GetHead()->next;
-  list.RemoveAfter(next_to_head); // удаляем 3
-  list.RemoveAfter(next_to_head); // удаляем 2
-
-  const vector<int> expected1 = {5, 4, 1};
-  ASSERT_EQUAL(ToVector(list), expected1);
-
-  while (list.GetHead()->next) {
-    list.RemoveAfter(list.GetHead());
-  }
-  ASSERT_EQUAL(list.GetHead()->value, 5);
-}
-
-void TestPopFront() {
-  LinkedList<int> list;
-
-  for (int i = 1; i <= 5; ++i) {
-    list.PushFront(i);
-  }
-  for (int i = 1; i <= 5; ++i) {
-    list.PopFront();
-  }
-  ASSERT(list.GetHead() == nullptr);
+void TestNonCopyIntVector() {
+  vector<NonCopyableInt> numbers;
+  numbers.push_back({6});
+  numbers.push_back({1});
+  numbers.push_back({3});
+  numbers.push_back({9});
+  numbers.push_back({1});
+  numbers.push_back({9});
+  numbers.push_back({8});
+  numbers.push_back({12});
+  numbers.push_back({1});
+  MergeSort(begin(numbers), end(numbers));
 }
 
 int main() {
   TestRunner tr;
-  RUN_TEST(tr, TestPushFront);
-  RUN_TEST(tr, TestInsertAfter);
-  RUN_TEST(tr, TestRemoveAfter);
-  RUN_TEST(tr, TestPopFront);
+  RUN_TEST(tr, TestIntVector);
   return 0;
 }
