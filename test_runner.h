@@ -78,6 +78,18 @@ void AssertEqual(const T &t, const U &u, const string &hint = {}) {
   }
 }
 
+template <class T, class U>
+void AssertEqual(T &&t, U &&u, const string &hint = {}) {
+  if (!(t == u)) {
+    ostringstream os;
+    os << "Assertion failed: " << t << " != " << u;
+    if (!hint.empty()) {
+      os << " hint: " << hint;
+    }
+    throw runtime_error(os.str());
+  }
+}
+
 inline void Assert(bool b, const string &hint) { AssertEqual(b, true, hint); }
 
 class TestRunner {
@@ -114,7 +126,6 @@ class TestRunner {
                               << __LINE__;                                     \
     AssertEqual(x, y, __assert_equal_private_os.str());                        \
   }
-
 #define ASSERT(x)                                                       \
   {                                                                     \
     ostringstream __assert_equal_private_os;                            \
