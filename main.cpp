@@ -1,5 +1,5 @@
-#include "test_runner.h"
 #include "profile.h"
+#include "test_runner.h"
 
 #include <map>
 #include <string>
@@ -8,24 +8,51 @@ using namespace std;
 struct Stats {
   map<string, int> word_frequences;
 
-  void operator += (const Stats& other);
+  void operator+=(const Stats& other);
 };
 
-Stats ExploreLine(const set<string>& key_words, const string& line) {
+void Stats::operator+=(const Stats& other) {
+  for (const auto& x : other.word_frequences) {
+    word_frequences[x.first] += x.second;
+  }
 }
 
-Stats ExploreKeyWordsSingleThread(
-  const set<string>& key_words, istream& input
-) {
+Stats ExploreLine(const set<string>& key_words, const string& line) {
+  string_view line_view = line;
+  Stats res;
+
+  // remove leading spaces
+  line_view.remove_prefix(
+      min(line_view.find_first_not_of(' '), line_view.size()));
+
+  // peek separate words
+  while (line_view.size() > 0) {
+    auto not_space_pos = min(line_view.find_first_of(' '), line_view.size());
+    auto word = string(line_view.substr(0, not_space_pos));
+
+    if (key_words.count(word)) {
+      res.word_frequences[word]++;
+    }
+
+    line_view.remove_prefix(not_space_pos);
+    auto space_pos = min(line_view.find_first_not_of(' '), line_view.size());
+    line_view.remove_prefix(space_pos);
+  }
+
+  return res;
+}
+
+Stats ExploreKeyWordsSingleThread(const set<string>& key_words,
+                                  istream& input) {
   Stats result;
-  for (string line; getline(input, line); ) {
+  for (string line; getline(input, line);) {
     result += ExploreLine(key_words, line);
   }
   return result;
 }
 
 Stats ExploreKeyWords(const set<string>& key_words, istream& input) {
-  // Реализуйте эту функцию
+  return ExploreKeyWordsSingleThread(key_words, input);
 }
 
 void TestBasic() {
@@ -39,11 +66,7 @@ void TestBasic() {
   ss << "Goondex really sucks, but yangle rocks. Use yangle\n";
 
   const auto stats = ExploreKeyWords(key_words, ss);
-  const map<string, int> expected = {
-    {"yangle", 6},
-    {"rocks", 2},
-    {"sucks", 1}
-  };
+  const map<string, int> expected = {{"yangle", 6}, {"rocks", 2}, {"sucks", 1}};
   ASSERT_EQUAL(stats.word_frequences, expected);
 }
 
