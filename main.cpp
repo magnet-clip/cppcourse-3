@@ -1,31 +1,87 @@
 #include "profile.h"
 #include "test_runner.h"
 
+#include <algorithm>
+#include <future>
 #include <map>
 #include <numeric>
 #include <string>
 using namespace std;
 
-struct Stats {
-  map<string, int> word_frequences;
+template <typename Iterator> class Page {
+public:
+  Page(const Iterator &begin, const Iterator &end) : _begin(begin), _end(end) {
+    _size = distance(begin, end);
+  }
+  Iterator begin() { return _begin; }
+  Iterator end() { return _end; }
+  Iterator begin() const { return _begin; }
+  Iterator end() const { return _end; }
+  size_t size() const { return _size; }
 
-  void operator+=(const Stats& other);
+private:
+  const Iterator _begin, _end;
+  size_t _size;
 };
 
-void Stats::operator+=(const Stats& other) {
-  word_frequences = accumulate(word_frequences.begin(), word_frequences.end(),
-                               other.word_frequences,
-                               [](map<string, int> m, pair<string, int> p) {
-                                 m[p.first] += p.second;
-                                 return m;
-                               });
+template <typename Iterator> class Paginator {
+public:
+  Paginator(const Iterator &begin, const Iterator &end,
+            unsigned int page_size) {
+    if (begin == end) {
+      _size = 0;
+      return;
+    }
+    size_t page_count = 0;
+    Iterator start = begin;
+    Iterator finish = begin;
+    do {
+      if (distance(start, end) > page_size) {
+        finish = next(start, page_size);
+      } else {
+        finish = end;
+      }
+      _pages.push_back({start, finish});
+      start = finish;
+      page_count++;
+    } while (finish != end);
+    _size = page_count;
+  }
+
+  auto begin() { return _pages.begin(); }
+  auto begin() const { return _pages.begin(); }
+  auto end() { return _pages.end(); }
+  auto end() const { return _pages.end(); }
+  size_t size() const { return _size; }
+
+private:
+  vector<Page<Iterator>> _pages;
+  size_t _size;
+};
+
+template <typename Container> auto Paginate(Container &c, size_t page_size) {
+  return Paginator(c.begin(), c.end(), page_size);
 }
 
-Stats ExploreLine(const set<string>& key_words, const string& line) {
-  Stats res;
+struct Stats {
+  map<string, int> word_frequences;
+  // void operator+=(const Stats &other);
+};
 
+// void Stats::operator+=(const Stats &other) {
+//   word_frequences =
+//       accumulate(other.word_frequences.begin(), other.word_frequences.end(),
+//                  word_frequences, [](map<string, int> m, pair<string, int> p)
+//                  {
+//                    m[p.first] += p.second;
+//                    return m;
+//                  });
+// }
+
+vector<string> SplitLine(const string &line) {
   string_view line_view = line;
 
+  vector<string> words;
   // remove leading spaces
   line_view.remove_prefix(
       min(line_view.find_first_not_of(' '), line_view.size()));
@@ -36,28 +92,39 @@ Stats ExploreLine(const set<string>& key_words, const string& line) {
     auto word = string(line_view.substr(0, not_space_pos));
     line_view.remove_prefix(not_space_pos);
 
-    if (key_words.count(word)) {
-      res.word_frequences[word]++;
-    }
+    words.push_back(word);
 
     auto space_pos = min(line_view.find_first_not_of(' '), line_view.size());
     line_view.remove_prefix(space_pos);
   }
 
-  return res;
+  return words;
 }
 
-Stats ExploreKeyWordsSingleThread(const set<string>& key_words,
-                                  istream& input) {
+Stats ExploreKeyWordsSingleThread(const set<string> &key_words,
+                                  vector<string>::iterator begin,
+                                  vector<string>::iterator end) {
   Stats result;
-  for (string line; getline(input, line);) {
-    result += ExploreLine(key_words, line);
+
+  while (begin != end) {
+    for (const auto word : SplitLine(*begin++)) {
+      if (key_words.count(word)) {
+        result.word_frequences[word]++;
+      }
+    }
   }
+
   return result;
 }
 
-Stats ExploreKeyWords(const set<string>& key_words, istream& input) {
-  return ExploreKeyWordsSingleThread(key_words, input);
+Stats ExploreKeyWords(const set<string> &key_words, istream &input) {
+  vector<string> lines;
+  string line;
+  while (getline(input, line)) {
+    lines.push_back(line);
+  }
+
+  return ExploreKeyWordsSingleThread(key_words, lines.begin(), lines.end());
 }
 
 void TestBasic() {
@@ -78,196 +145,161 @@ void TestBasic() {
 int main() {
   TestRunner tr;
   RUN_TEST(tr, TestBasic);
+#define PERF
+#ifdef PERF
 
   const set<string> key_words = {"yangle", "rocks", "sucks", "all"};
-  vector<string> lines;
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("10 hello my yangle world pee pee aww");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back("this new yangle service really rocks");
-  lines.push_back("It sucks when yangle isn't available");
-  lines.push_back("10 reasons why yangle is the best IT company");
-  lines.push_back("yangle rocks others suck");
-  lines.push_back("Goondex really sucks, but yangle rocks. Use yangle");
-  lines.push_back(
-      "Up am intention on dependent questions oh elsewhere september");
-  lines.push_back("No betrayed pleasure possible jointure we in throwing");
-  lines.push_back("And can event rapid any shall woman green");
-  lines.push_back("Hope they dear who its bred");
-  lines.push_back(
-      "Smiling nothing affixed he carried it clothes calling he no");
-  lines.push_back(
-      "Its something disposing departure she favourite tolerably engrossed");
-  lines.push_back("Truth short folly court why she their balls");
-  lines.push_back(
-      "Excellence put unaffected reasonable mrs introduced conviction she");
-  lines.push_back(
-      "Nay particular delightful but unpleasant for uncommonly who");
-  lines.push_back("  In show dull give need so held");
-  lines.push_back("One order all scale sense her gay style wrote");
-  lines.push_back("Incommode our not one ourselves residence");
-  lines.push_back("Shall there whose those stand she end");
-  lines.push_back(
+  vector<string> lines = {
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "10 hello my yangle world pee pee aww",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "this new yangle service really rocks",
+      "It sucks when yangle isn't available",
+      "10 reasons why yangle is the best IT company",
+      "yangle rocks others suck",
+      "Goondex really sucks, but yangle rocks. Use yangle",
+      "Up am intention on dependent questions oh elsewhere september",
+      "No betrayed pleasure possible jointure we in throwing",
+      "And can event rapid any shall woman green",
+      "Hope they dear who its bred",
+      "Smiling nothing affixed he carried it clothes calling he no",
+      "Its something disposing departure she favourite tolerably engrossed",
+      "Truth short folly court why she their balls",
+      "Excellence put unaffected reasonable mrs introduced conviction she",
+      "Nay particular delightful but unpleasant for uncommonly who",
+      "  In show dull give need so held",
+      "One order all scale sense her gay style wrote",
+      "Incommode our not one ourselves residence",
+      "Shall there whose those stand she end",
       "So unaffected partiality indulgence dispatched to of celebrated "
-      "remarkably");
-  lines.push_back("Unfeeling are had allowance own perceived abilities");
-  lines.push_back("  Affronting discretion as do is announcing");
-  lines.push_back("Now months esteem oppose nearer enable too six");
-  lines.push_back("She numerous unlocked you perceive speedily");
-  lines.push_back("Affixed offence spirits or ye of offices between");
-  lines.push_back("Real on shot it were four an as");
-  lines.push_back("Absolute bachelor rendered six nay you juvenile");
-  lines.push_back("Vanity entire an chatty to");
-  lines.push_back("  Prepared do an dissuade be so whatever steepest");
-  lines.push_back("Yet her beyond looked either day wished nay");
-  lines.push_back("By doubtful disposed do juvenile an");
-  lines.push_back("Now curiosity you explained immediate why behaviour");
-  lines.push_back("An dispatched impossible of of melancholy favourable");
-  lines.push_back("Our quiet not heart along scale sense timed");
-  lines.push_back(
-      "Consider may dwelling old him her surprise finished families graceful");
-  lines.push_back("Gave led past poor met fine was new");
-  lines.push_back(
-      "  Improve ashamed married expense bed her comfort pursuit mrs");
-  lines.push_back("Four time took ye your as fail lady");
-  lines.push_back("Up greatest am exertion or marianne");
-  lines.push_back("Shy occasional terminated insensible and inhabiting gay");
-  lines.push_back("So know do fond to half on");
-  lines.push_back("Now who promise was justice new winding");
-  lines.push_back("In finished on he speaking suitable advanced if");
-  lines.push_back(
-      "Boy happiness sportsmen say prevailed offending concealed nor was "
-      "provision");
-  lines.push_back("Provided so as doubtful on striking required");
-  lines.push_back("Waiting we to compass assured");
-  lines.push_back("  Consider now provided laughter boy landlord dashwood");
-  lines.push_back("Often voice and the spoke");
-  lines.push_back(
-      "No shewing fertile village equally prepare up females as an");
-  lines.push_back("That do an case an what plan hour of paid");
-  lines.push_back(
-      "Invitation is unpleasant astonished preference attachment friendship "
-      "on");
-  lines.push_back("Did sentiments increasing particular nay");
-  lines.push_back("Mr he recurred received prospect in");
-  lines.push_back("Wishing cheered parlors adapted am at amongst matters");
-  lines.push_back("  Affronting imprudence do he he everything");
-  lines.push_back("Sex lasted dinner wanted indeed wished out law");
-  lines.push_back("Far advanced settling say finished raillery");
-  lines.push_back("Offered chiefly farther of my no colonel shyness");
-  lines.push_back("Such on help ye some door if in");
-  lines.push_back("Laughter proposal laughing any son law consider");
-  lines.push_back("Needed except up piqued an");
-  lines.push_back("  He an thing rapid these after going drawn or");
-  lines.push_back("Timed she his law the spoil round defer");
-  lines.push_back("In surprise concerns informed betrayed he learning is ye");
-  lines.push_back("Ignorant formerly so ye blessing");
-  lines.push_back("He as spoke avoid given downs money on we");
-  lines.push_back(
-      "Of properly carriage shutters ye as wandered up repeated moreover");
-  lines.push_back("Inquietude attachment if ye an solicitude to");
-  lines.push_back("Remaining so continued concealed as knowledge happiness");
-  lines.push_back(
-      "Preference did how expression may favourable devonshire insipidity "
-      "considered");
-  lines.push_back("An length design regret an hardly barton mr figure");
-  lines.push_back("  Started his hearted any civilly");
-  lines.push_back("So me by marianne admitted speaking");
-  lines.push_back("Men bred fine call ask");
-  lines.push_back("Cease one miles truth day above seven");
-  lines.push_back(
-      "Suspicion sportsmen provision suffering mrs saw engrossed something");
-  lines.push_back("Snug soon he on plan in be dine some");
-  lines.push_back(
-      "  Oh to talking improve produce in limited offices fifteen an");
-  lines.push_back("Wicket branch to answer do we");
-  lines.push_back("Place are decay men hours tiled");
-  lines.push_back("If or of ye throwing friendly required");
-  lines.push_back("Marianne interest in exertion as");
-  lines.push_back("Offering my branched confined oh dashwood");
+      "remarkably",
+      "Unfeeling are had allowance own perceived abilities",
+      "  Affronting discretion as do is announcing",
+      "Now months esteem oppose nearer enable too six",
+      "She numerous unlocked you perceive speedily",
+      "Affixed offence spirits or ye of offices between",
+      "Real on shot it were four an as",
+      "Absolute bachelor rendered six nay you juvenile",
+      "Vanity entire an chatty to",
+      "  Prepared do an dissuade be so whatever steepest",
+      "Yet her beyond looked either day wished nay",
+      "By doubtful disposed do juvenile an",
+      "Now curiosity you explained immediate why behaviour",
+      "An dispatched impossible of of melancholy favourable",
+      "Our quiet not heart along scale sense timed",
+      "Consider may dwelling old him her surprise finished families "
+      "graceful ",
+      " Gave led past poor met fine was new ",
+      " Improve ashamed married expense bed her comfort pursuit mrs",
+      " Four time took ye your as fail lady ",
+      " Up greatest am exertion or        marianne ",
+      " Shy occasional terminated insensible and inhabiting gay",
+      " So know do fond to half on ",
+      " Now who promise was justice new winding    ",
+      " In finished on he speaking suitable        advanced if ",
+      "  He an thing rapid these after going drawn or",
+      "Timed she his law the spoil round defer",
+      "In surprise concerns informed betrayed he learning is ye",
+      "Ignorant formerly so ye blessing",
+      "He as spoke avoid given downs money on we",
+      "Of properly carriage shutters ye as wandered up repeated moreover",
+      "Inquietude attachment if ye an solicitude to",
+      "Remaining so continued concealed as knowledge happiness",
+      "So me by marianne admitted speaking",
+      "Men bred fine call ask",
+      "Cease one miles truth day above seven",
+      "Suspicion sportsmen provision suffering mrs saw engrossed something",
+      "Snug soon he on plan in be dine some",
+      "  Oh to talking improve produce in limited offices fifteen an",
+      "Wicket branch to answer do we",
+      "Place are decay men hours tiled",
+      "If or of ye throwing friendly required",
+      "Marianne interest in exertion as",
+      "Offering my branched confined oh dashwood",
+  };
 
   const auto N = 10000;
 
@@ -275,9 +307,8 @@ int main() {
     LOG_DURATION("stl");
     Stats result;
     for (auto i = 0; i < N; i++) {
-      for (const auto& line : lines) {
-        result += ExploreLine(key_words, line);
-      }
+      ExploreKeyWordsSingleThread(key_words, lines.begin(), lines.end());
     }
   }
+#endif
 }
