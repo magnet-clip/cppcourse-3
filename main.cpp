@@ -208,7 +208,7 @@ void TestBasicSearch() {
         for (size_t i = 0; i < N; i++) {  \
             fun();                        \
         }                                 \
-    } while(1)
+    } while(0)
 
 void AllTests() {
   TestSerpFormat();

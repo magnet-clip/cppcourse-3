@@ -35,7 +35,7 @@ void SearchServer::UpdateDocumentBase(istream& document_input) {
   InvertedIndex new_index;
 
   for (string current_document; getline(document_input, current_document); ) {
-    new_index.Add(move(current_document));
+    new_index.Add(current_document);
   }
 
   index = move(new_index);
@@ -89,8 +89,6 @@ void InvertedIndex::Add(const string& document) {
 }
 
 list<size_t> InvertedIndex::Lookup(const string& word) const {
-//  if (index.count(word)) return index.at(word);
-//  return {};
   if (auto it = index.find(word); it != index.end()) {
     return it->second;
   } else {
