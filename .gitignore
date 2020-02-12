@@ -3,3 +3,4 @@ build
 .devcontainer
 .idea
 cmake-build-debug
+*.zip
