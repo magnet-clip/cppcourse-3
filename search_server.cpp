@@ -2,13 +2,29 @@
 #include "iterator_range.h"
 
 #include <algorithm>
-#include <iterator>
-#include <sstream>
 #include <iostream>
 
-vector<string> SplitIntoWords(const string& line) {
-  istringstream words_input(line);
-  return {istream_iterator<string>(words_input), istream_iterator<string>()};
+vector<string> SplitIntoWords(const string &line) {
+  string_view line_view = line;
+
+  vector<string> words;
+  // remove leading spaces
+  line_view.remove_prefix(
+      min(line_view.find_first_not_of(' '), line_view.size()));
+
+  // peek separate words
+  while (!line_view.empty()) {
+    auto not_space_pos = min(line_view.find_first_of(' '), line_view.size());
+    auto word = string(line_view.substr(0, not_space_pos));
+    line_view.remove_prefix(not_space_pos);
+
+    words.push_back(word);
+
+    auto space_pos = min(line_view.find_first_not_of(' '), line_view.size());
+    line_view.remove_prefix(space_pos);
+  }
+
+  return words;
 }
 
 SearchServer::SearchServer(istream& document_input) {
