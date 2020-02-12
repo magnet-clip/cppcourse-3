@@ -1,27 +1,36 @@
 #include "test_runner.h"
 
-#include <numeric>
-#include <vector>
-#include <string>
 #include <future>
 #include <mutex>
+#include <numeric>
 #include <queue>
+#include <string>
 #include <thread>
+#include <vector>
 using namespace std;
 
 // Реализуйте шаблон Synchronized<T>.
 // Метод GetAccess должен возвращать структуру, в которой есть поле T& value.
-template <typename T>
-class Synchronized {
+template <typename T> class Synchronized {
 public:
-  explicit Synchronized(T initial = T());
+  explicit Synchronized(T initial = T()) : value(move(initial)) {}
 
   struct Access {
-    T& ref_to_value;
+    Access(T &t, mutex &m) : ref_to_value(t), _m(m) {}
+    ~Access() { _m.unlock(); }
+    T &ref_to_value;
+
+  private:
+    mutex &_m;
   };
 
-  Access GetAccess();
+  Access GetAccess() {
+    m.lock();
+    return {value, m};
+  }
+
 private:
+  mutex m;
   T value;
 };
 
@@ -45,7 +54,7 @@ void TestConcurrentUpdate() {
   ASSERT_EQUAL(common_string.GetAccess().ref_to_value.size(), 2 * add_count);
 }
 
-vector<int> Consume(Synchronized<deque<int>>& common_queue) {
+vector<int> Consume(Synchronized<deque<int>> &common_queue) {
   vector<int> got;
 
   for (;;) {
