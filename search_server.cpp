@@ -89,6 +89,8 @@ void InvertedIndex::Add(const string& document) {
 }
 
 list<size_t> InvertedIndex::Lookup(const string& word) const {
+//  if (index.count(word)) return index.at(word);
+//  return {};
   if (auto it = index.find(word); it != index.end()) {
     return it->second;
   } else {

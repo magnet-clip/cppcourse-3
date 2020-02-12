@@ -208,7 +208,15 @@ void TestBasicSearch() {
         for (size_t i = 0; i < N; i++) {  \
             fun();                        \
         }                                 \
-    } while(0)
+    } while(1)
+
+void AllTests() {
+  TestSerpFormat();
+  TestTop5();
+  TestHitcount();
+  TestRanking();
+  TestBasicSearch();
+}
 
 int main() {
   TestRunner tr;
@@ -219,6 +227,6 @@ int main() {
   RUN_TEST(tr, TestBasicSearch);
 
   size_t N = 100'000;
-  PERFORM(TestSerpFormat, N);
+  PERFORM(AllTests, N);
 //    PERFORM(TestTop5, N);
 }
