@@ -1,32 +1,31 @@
-#include "test_runner.h"
 #include "profile.h"
+#include "test_runner.h"
 
 #include <algorithm>
+#include <future>
 #include <numeric>
-#include <vector>
-#include <string>
 #include <random>
+#include <string>
+#include <vector>
 using namespace std;
 
-template <typename K, typename V>
-class ConcurrentMap {
+template <typename K, typename V> class ConcurrentMap {
 public:
   static_assert(is_integral_v<K>, "ConcurrentMap supports only integer keys");
 
   struct Access {
-    V& ref_to_value;
+    V &ref_to_value;
   };
 
   explicit ConcurrentMap(size_t bucket_count);
 
-  Access operator[](const K& key);
+  Access operator[](const K &key);
 
   map<K, V> BuildOrdinaryMap();
 };
 
-void RunConcurrentUpdates(
-    ConcurrentMap<int, int>& cm, size_t thread_count, int key_count
-) {
+void RunConcurrentUpdates(ConcurrentMap<int, int> &cm, size_t thread_count,
+                          int key_count) {
   auto kernel = [&cm, key_count](int seed) {
     vector<int> updates(key_count);
     iota(begin(updates), end(updates), -key_count / 2);
@@ -54,7 +53,7 @@ void TestConcurrentUpdate() {
 
   const auto result = cm.BuildOrdinaryMap();
   ASSERT_EQUAL(result.size(), key_count);
-  for (auto& [k, v] : result) {
+  for (auto &[k, v] : result) {
     AssertEqual(v, 6, "Key = " + to_string(k));
   }
 }
@@ -85,7 +84,7 @@ void TestReadAndWrite() {
 
   for (auto f : {&r1, &r2}) {
     auto result = f->get();
-    ASSERT(all_of(result.begin(), result.end(), [](const string& s) {
+    ASSERT(all_of(result.begin(), result.end(), [](const string &s) {
       return s.empty() || s == "a" || s == "aa";
     }));
   }
