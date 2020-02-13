@@ -5,24 +5,22 @@
 #include <iostream>
 #include <vector>
 
-vector<string> SplitIntoWords(const string_view &line) {
-  string_view line_view = line;
+vector<string> SplitIntoWords(string_view line) {
 
   vector<string> words;
   // remove leading spaces
-  line_view.remove_prefix(
-      min(line_view.find_first_not_of(' '), line_view.size()));
+  line.remove_prefix(min(line.find_first_not_of(' '), line.size()));
 
   // peek separate words
-  while (!line_view.empty()) {
-    auto not_space_pos = min(line_view.find_first_of(' '), line_view.size());
-    auto word = string(line_view.substr(0, not_space_pos));
-    line_view.remove_prefix(not_space_pos);
+  while (!line.empty()) {
+    auto not_space_pos = min(line.find_first_of(' '), line.size());
+    auto word = string(line.substr(0, not_space_pos));
+    line.remove_prefix(not_space_pos);
 
     words.push_back(word);
 
-    auto space_pos = min(line_view.find_first_not_of(' '), line_view.size());
-    line_view.remove_prefix(space_pos);
+    auto space_pos = min(line.find_first_not_of(' '), line.size());
+    line.remove_prefix(space_pos);
   }
 
   return words;
@@ -51,7 +49,7 @@ void SearchServer::AddQueriesStream(istream &query_input,
     // search_results.fill({0, 0});
     // pair<size_t, size_t> zero(0, 0);
     // std::fill(search_results.begin(), search_results.end(), zero);
-    const auto words = SplitIntoWords(current_query);
+    const auto words = SplitIntoWords(move(current_query));
 
     Map<size_t, size_t> docid_count;
     for (const auto &word : words) {

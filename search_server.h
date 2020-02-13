@@ -19,8 +19,8 @@ public:
   const string_view &GetDocument(size_t id) const { return docs[id]; }
 
 private:
-  Map<string, list<size_t>> index;
-  vector<string_view> docs;
+  Map<string, list<size_t>> index; // word -> [documents]
+  vector<string_view> docs;        // # (docid) -> document
   list<size_t> none;
 };
 
