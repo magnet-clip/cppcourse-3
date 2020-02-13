@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 
 vector<string> SplitIntoWords(const string &line) {
   string_view line_view = line;
@@ -44,36 +45,36 @@ void SearchServer::UpdateDocumentBase(istream& document_input) {
 void SearchServer::AddQueriesStream(
   istream& query_input, ostream& search_results_output
 ) {
+  vector<size_t> docid_count(50000);
+  vector<size_t> docid_positions(50000);
+
   for (string current_query; getline(query_input, current_query); ) {
+    docid_count.clear();
+    iota(docid_positions.begin(), docid_positions.end(), 0);
+
     const auto words = SplitIntoWords(current_query);
 
-    Map<size_t, size_t> docid_count;
     for (const auto& word : words) {
       for (const size_t docid : index.Lookup(word)) {
         docid_count[docid]++;
       }
     }
 
-    vector<pair<size_t, size_t>> search_results(
-      docid_count.begin(), docid_count.end()
-    );
     sort(
-      begin(search_results),
-      end(search_results),
-      [](pair<size_t, size_t> lhs, pair<size_t, size_t> rhs) {
-        int64_t lhs_docid = lhs.first;
-        auto lhs_hit_count = lhs.second;
-        int64_t rhs_docid = rhs.first;
-        auto rhs_hit_count = rhs.second;
+      begin(docid_positions),
+      end(docid_positions),
+      [&docid_count](size_t lhs_docid, size_t rhs_docid) {
+        auto lhs_hit_count = docid_count[lhs_docid];
+        auto rhs_hit_count = docid_count[rhs_docid];
         return make_pair(lhs_hit_count, -lhs_docid) > make_pair(rhs_hit_count, -rhs_docid);
       }
     );
 
     search_results_output << current_query << ':';
-    for (auto [docid, hitcount] : Head(search_results, 5)) {
+    for (auto docid : Head(docid_positions, 5)) {
       search_results_output << " {"
         << "docid: " << docid << ", "
-        << "hitcount: " << hitcount << '}';
+        << "hitcount: " << docid_count[docid] << '}';
     }
     search_results_output << endl;
   }

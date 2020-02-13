@@ -20,8 +20,8 @@ class InvertedIndex {
   }
 
  private:
-  Map<string, list<size_t>> index;
-  vector<string> docs;
+  Map<string, list<size_t>> index; // word -> docid
+  vector<string> docs;             // docid -> doc
 };
 
 class SearchServer {

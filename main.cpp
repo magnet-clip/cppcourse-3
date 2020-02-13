@@ -201,10 +201,12 @@ void TestBasicSearch() {
   };
   TestFunctionality(docs, queries, expected);
 }
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
 
 #define PERFORM(fun, N)                   \
     do {                                  \
-        LOG_DURATION(#fun);               \
+        LOG_DURATION(#fun " x " STR(N) " times");               \
         for (size_t i = 0; i < N; i++) {  \
             fun();                        \
         }                                 \
@@ -218,6 +220,7 @@ void AllTests() {
   TestBasicSearch();
 }
 
+#define NUM_REPEATS 100'000
 int main() {
   TestRunner tr;
   RUN_TEST(tr, TestSerpFormat);
@@ -226,7 +229,6 @@ int main() {
   RUN_TEST(tr, TestRanking);
   RUN_TEST(tr, TestBasicSearch);
 
-  size_t N = 100'000;
-  PERFORM(AllTests, N);
+  PERFORM(AllTests, NUM_REPEATS);
 //    PERFORM(TestTop5, N);
 }
