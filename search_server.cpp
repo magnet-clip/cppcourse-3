@@ -7,24 +7,25 @@
 #include <vector>
 
 vector<string> SplitIntoWords(string_view line) {
-
   vector<string> words;
+//  array<string, 1000> words; // does not help, stack overhead
+  words.reserve(1000); // reservation seems only to increase total time
   // remove leading spaces
   line.remove_prefix(min(line.find_first_not_of(' '), line.size()));
-
   // peek separate words
+//  size_t word_counter = 0;
   while (!line.empty()) {
     auto not_space_pos = min(line.find_first_of(' '), line.size());
     auto word = string(line.substr(0, not_space_pos));
     line.remove_prefix(not_space_pos);
 
     words.push_back(word);
-
+//    word_counter++;
     auto space_pos = min(line.find_first_not_of(' '), line.size());
     line.remove_prefix(space_pos);
   }
-
-  return words;
+//  words.resize(word_counter);
+  return words;//{make_move_iterator(words.begin()), make_move_iterator(words.begin()+word_counter)};
 }
 
 SearchServer::SearchServer(istream &document_input) {
@@ -40,7 +41,6 @@ void SearchServer::UpdateDocumentBase(istream &document_input) {
 
   index = move(new_index);
 }
-
 
 void SearchServer::AddQueriesStream(istream &query_input,
                                     ostream &search_results_output) {
@@ -62,7 +62,6 @@ void SearchServer::AddQueriesStream(istream &query_input,
       }
     }
 
-
     vector<pair<size_t, size_t>> search_results(docid_count.begin(),
                                                 docid_count.end());
 
@@ -74,11 +73,11 @@ void SearchServer::AddQueriesStream(istream &query_input,
            int64_t rhs_docid = rhs.first;
            auto rhs_hit_count = rhs.second;
            return make_pair(lhs_hit_count, -lhs_docid) >
-                  make_pair(rhs_hit_count, -rhs_docid);
+               make_pair(rhs_hit_count, -rhs_docid);
          });
 
     search_results_output << current_query << ':';
-    for (auto [docid, hitcount] : Head(search_results, 5)) {
+    for (auto[docid, hitcount] : Head(search_results, 5)) {
       if (hitcount != 0) {
         search_results_output << " {"
                               << "docid: " << docid << ", "
@@ -98,7 +97,7 @@ void InvertedIndex::Add(const string_view &document) {
   }
 }
 
-const list<size_t> &InvertedIndex::Lookup(const string &word) const {
+const InvertedIndex::DocIndex &InvertedIndex::Lookup(const string &word) const {
   if (auto it = index.find(word); it != index.end()) {
     return it->second;
   } else {

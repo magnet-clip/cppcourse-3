@@ -195,14 +195,22 @@ void AllTests() {
   TestBasicSearch();
 }
 
+#define TEST
+#define PERF
+
 #define NUM_REPEATS 100'000
+
 int main() {
+#ifdef TEST
   TestRunner tr;
   RUN_TEST(tr, TestSerpFormat);
   RUN_TEST(tr, TestTop5);
   RUN_TEST(tr, TestHitcount);
   RUN_TEST(tr, TestRanking);
   RUN_TEST(tr, TestBasicSearch);
+#endif
 
+#ifdef PERF
   PERFORM(AllTests, NUM_REPEATS);
+#endif
 }
