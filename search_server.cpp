@@ -9,7 +9,7 @@
 vector<string> SplitIntoWords(string_view line) {
   vector<string> words;
 //  array<string, 1000> words; // does not help, stack overhead
-  words.reserve(1000); // reservation seems only to increase total time
+//  words.reserve(1000); // reservation seems only to increase total time
   // remove leading spaces
   line.remove_prefix(min(line.find_first_not_of(' '), line.size()));
   // peek separate words
