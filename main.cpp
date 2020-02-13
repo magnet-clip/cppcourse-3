@@ -1,25 +1,23 @@
-#include "search_server.h"
 #include "parse.h"
-#include "test_runner.h"
 #include "profile.h"
+#include "search_server.h"
+#include "test_runner.h"
 
 #include <algorithm>
+#include <fstream>
 #include <iterator>
 #include <map>
-#include <vector>
-#include <string>
-#include <sstream>
-#include <fstream>
 #include <random>
+#include <sstream>
+#include <string>
 #include <thread>
+#include <vector>
 
 using namespace std;
 
-void TestFunctionality(
-    const vector<string> &docs,
-    const vector<string> &queries,
-    const vector<string> &expected
-) {
+void TestFunctionality(const vector<string> &docs,
+                       const vector<string> &queries,
+                       const vector<string> &expected) {
   istringstream docs_input(Join('\n', docs));
   istringstream queries_input(Join('\n', queries));
 
@@ -37,52 +35,33 @@ void TestFunctionality(
 }
 
 void TestSerpFormat() {
-  const vector<string> docs = {
-      "london is the capital of great britain",
-      "i am travelling down the river"
-  };
+  const vector<string> docs = {"london is the capital of great britain",
+                               "i am travelling down the river"};
   const vector<string> queries = {"london", "the"};
   const vector<string> expected = {
       "london: {docid: 0, hitcount: 1}",
-      Join(' ', vector{
-          "the:",
-          "{docid: 0, hitcount: 1}",
-          "{docid: 1, hitcount: 1}"
-      })
-  };
+      Join(' ', vector{"the:", "{docid: 0, hitcount: 1}",
+                       "{docid: 1, hitcount: 1}"})};
 
   TestFunctionality(docs, queries, expected);
 }
 
 void TestTop5() {
-  const vector<string> docs = {
-      "milk a",
-      "milk b",
-      "milk c",
-      "milk d",
-      "milk e",
-      "milk f",
-      "milk g",
-      "water a",
-      "water b",
-      "fire and earth"
-  };
+  const vector<string> docs = {"milk a",  "milk b",        "milk c", "milk d",
+                               "milk e",  "milk f",        "milk g", "water a",
+                               "water b", "fire and earth"};
 
   const vector<string> queries = {"milk", "water", "rock"};
   const vector<string> expected = {
-      Join(' ', vector{
-          "milk:",
-          "{docid: 0, hitcount: 1}",
-          "{docid: 1, hitcount: 1}",
-          "{docid: 2, hitcount: 1}",
-          "{docid: 3, hitcount: 1}",
-          "{docid: 4, hitcount: 1}"
-      }),
-      Join(' ', vector{
-          "water:",
-          "{docid: 7, hitcount: 1}",
-          "{docid: 8, hitcount: 1}",
-      }),
+      Join(' ', vector{"milk:", "{docid: 0, hitcount: 1}",
+                       "{docid: 1, hitcount: 1}", "{docid: 2, hitcount: 1}",
+                       "{docid: 3, hitcount: 1}", "{docid: 4, hitcount: 1}"}),
+      Join(' ',
+           vector{
+               "water:",
+               "{docid: 7, hitcount: 1}",
+               "{docid: 8, hitcount: 1}",
+           }),
       "rock:",
   };
   TestFunctionality(docs, queries, expected);
@@ -97,24 +76,27 @@ void TestHitcount() {
   };
   const vector<string> queries = {"the", "wall", "all", "is", "the is"};
   const vector<string> expected = {
-      Join(' ', vector{
-          "the:",
-          "{docid: 0, hitcount: 2}",
-          "{docid: 1, hitcount: 1}",
-      }),
+      Join(' ',
+           vector{
+               "the:",
+               "{docid: 0, hitcount: 2}",
+               "{docid: 1, hitcount: 1}",
+           }),
       "wall: {docid: 1, hitcount: 1}",
       "all:",
-      Join(' ', vector{
-          "is:",
-          "{docid: 3, hitcount: 4}",
-          "{docid: 0, hitcount: 1}",
-      }),
-      Join(' ', vector{
-          "the is:",
-          "{docid: 3, hitcount: 4}",
-          "{docid: 0, hitcount: 3}",
-          "{docid: 1, hitcount: 1}",
-      }),
+      Join(' ',
+           vector{
+               "is:",
+               "{docid: 3, hitcount: 4}",
+               "{docid: 0, hitcount: 1}",
+           }),
+      Join(' ',
+           vector{
+               "the is:",
+               "{docid: 3, hitcount: 4}",
+               "{docid: 0, hitcount: 3}",
+               "{docid: 1, hitcount: 1}",
+           }),
   };
   TestFunctionality(docs, queries, expected);
 }
@@ -148,14 +130,13 @@ void TestRanking() {
   const vector<string> queries = {"moscow is the capital of russia"};
   const vector<string> expected = {
       Join(' ', vector{
-          "moscow is the capital of russia:",
-          "{docid: 7, hitcount: 6}",
-          "{docid: 14, hitcount: 6}",
-          "{docid: 0, hitcount: 4}",
-          "{docid: 1, hitcount: 4}",
-          "{docid: 2, hitcount: 4}",
-      })
-  };
+                    "moscow is the capital of russia:",
+                    "{docid: 7, hitcount: 6}",
+                    "{docid: 14, hitcount: 6}",
+                    "{docid: 0, hitcount: 4}",
+                    "{docid: 1, hitcount: 4}",
+                    "{docid: 2, hitcount: 4}",
+                })};
   TestFunctionality(docs, queries, expected);
 }
 
@@ -164,36 +145,30 @@ void TestBasicSearch() {
       "we are ready to go",
       "come on everybody shake you hands",
       "i love this game",
-      "just like exception safety is not about writing try catch everywhere in your code move semantics are not about typing double ampersand everywhere in your code",
+      "just like exception safety is not about writing try catch everywhere in "
+      "your code move semantics are not about typing double ampersand "
+      "everywhere in your code",
       "daddy daddy daddy dad dad dad",
       "tell me the meaning of being lonely",
       "just keep track of it",
       "how hard could it be",
       "it is going to be legen wait for it dary legendary",
-      "we dont need no education"
-  };
+      "we dont need no education"};
 
-  const vector<string> queries = {
-      "we need some help",
-      "it",
-      "i love this game",
-      "tell me why",
-      "dislike",
-      "about"
-  };
+  const vector<string> queries = {"we need some help", "it",
+                                  "i love this game",  "tell me why",
+                                  "dislike",           "about"};
 
   const vector<string> expected = {
-      Join(' ', vector{
-          "we need some help:",
-          "{docid: 9, hitcount: 2}",
-          "{docid: 0, hitcount: 1}"
-      }),
-      Join(' ', vector{
-          "it:",
-          "{docid: 8, hitcount: 2}",
-          "{docid: 6, hitcount: 1}",
-          "{docid: 7, hitcount: 1}",
-      }),
+      Join(' ', vector{"we need some help:", "{docid: 9, hitcount: 2}",
+                       "{docid: 0, hitcount: 1}"}),
+      Join(' ',
+           vector{
+               "it:",
+               "{docid: 8, hitcount: 2}",
+               "{docid: 6, hitcount: 1}",
+               "{docid: 7, hitcount: 1}",
+           }),
       "i love this game: {docid: 2, hitcount: 4}",
       "tell me why: {docid: 5, hitcount: 2}",
       "dislike:",
@@ -202,13 +177,13 @@ void TestBasicSearch() {
   TestFunctionality(docs, queries, expected);
 }
 
-#define PERFORM(fun, N)                   \
-    do {                                  \
-        LOG_DURATION(#fun);               \
-        for (size_t i = 0; i < N; i++) {  \
-            fun();                        \
-        }                                 \
-    } while(0)
+#define PERFORM(fun, N)                                                        \
+  do {                                                                         \
+    LOG_DURATION(#fun);                                                        \
+    for (size_t i = 0; i < N; i++) {                                           \
+      fun();                                                                   \
+    }                                                                          \
+  } while (0)
 
 void AllTests() {
   TestSerpFormat();
@@ -228,5 +203,5 @@ int main() {
 
   size_t N = 100'000;
   PERFORM(AllTests, N);
-//    PERFORM(TestTop5, N);
+  //    PERFORM(TestTop5, N);
 }
